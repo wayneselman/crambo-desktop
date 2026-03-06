@@ -1,0 +1,44 @@
+ cargo:info=`pkg_config` could not find `Opus`.
+  cargo:info=Opus source path used: "/Users/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/audiopus_sys-0.2.2/opus".
+  cargo:info=Building Opus via CMake.
+  CMAKE_TOOLCHAIN_FILE_aarch64-apple-darwin = None
+  CMAKE_TOOLCHAIN_FILE_aarch64_apple_darwin = None
+  HOST_CMAKE_TOOLCHAIN_FILE = None
+  CMAKE_TOOLCHAIN_FILE = None
+  CMAKE_GENERATOR_aarch64-apple-darwin = None
+  CMAKE_GENERATOR_aarch64_apple_darwin = None
+  HOST_CMAKE_GENERATOR = None
+  CMAKE_GENERATOR = None
+  CMAKE_PREFIX_PATH_aarch64-apple-darwin = None
+  CMAKE_PREFIX_PATH_aarch64_apple_darwin = None
+  HOST_CMAKE_PREFIX_PATH = None
+  CMAKE_PREFIX_PATH = None
+  CMAKE_aarch64-apple-darwin = None
+  CMAKE_aarch64_apple_darwin = None
+  HOST_CMAKE = None
+  CMAKE = None
+  -- Configuring incomplete, errors occurred!
+
+  --- stderr
+  running: cd "/Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/aarch64-apple-darwin/release/build/audiopus_sys-c61297049577fb25/out/build" && CMAKE_PREFIX_PATH="" LC_ALL="C" "cmake" "/Users/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/audiopus_sys-0.2.2/opus" "-B" "/Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/aarch64-apple-darwin/release/build/audiopus_sys-c61297049577fb25/out/build" "-DCMAKE_OSX_ARCHITECTURES=arm64" "-DCMAKE_INSTALL_PREFIX=/Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/aarch64-apple-darwin/release/build/audiopus_sys-c61297049577fb25/out" "-DCMAKE_C_FLAGS= -ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=10.13 -w" "-DCMAKE_C_COMPILER=/usr/bin/cc" "-DCMAKE_CXX_FLAGS= -ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=10.13 -w" "-DCMAKE_CXX_COMPILER=/usr/bin/c++" "-DCMAKE_ASM_FLAGS= -ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=10.13 -w" "-DCMAKE_ASM_COMPILER=/usr/bin/cc" "-DCMAKE_BUILD_TYPE=Release"
+  CMake Error at CMakeLists.txt:1 (cmake_minimum_required):
+    Compatibility with CMake < 3.5 has been removed from CMake.
+
+    Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+    to tell CMake that the project requires at least <min> but has been updated
+    to work with policies introduced by <max> or earlier.
+
+    Or, add -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to try configuring anyway.
+
+
+
+  thread 'main' (180535) panicked at /Users/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cmake-0.1.57/src/lib.rs:1132:5:
+
+  command did not execute successfully, got: exit status: 1
+
+  build script failed, must exit now
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+warning: build failed, waiting for other jobs to finish...
+failed to build aarch64-apple-darwin binary: failed to build app
+       Error failed to build aarch64-apple-darwin binary: failed to build app
+Error: Command "npm ["run","tauri","build","--","--target","universal-apple-darwin"]" failed with exit code 1
