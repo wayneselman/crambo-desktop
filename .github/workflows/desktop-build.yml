@@ -43,6 +43,29 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Nuke all cargo registry caches
+        run: |
+          rm -rf ~/.cargo/registry/src || true
+          rm -rf $CARGO_HOME/registry/src || true
+          rm -rf ~/.cargo/registry/cache || true
+          rm -rf $CARGO_HOME/registry/cache || true
+          find /Users/runner /home/runner -name "audiopus_sys*" -type d 2>/dev/null | xargs rm -rf || true
+          echo "Cargo home is: $CARGO_HOME"
+          echo "Home is: $HOME"
+
+      - name: Verify audiopus gone
+        run: |
+          find / -name "audiopus_sys*" -type d 2>/dev/null || echo "Clean - no audiopus found"
+
+      - name: Debug environment
+        run: |
+          echo "CARGO_HOME=$CARGO_HOME"
+          echo "HOME=$HOME"
+          echo "PATH=$PATH"
+          which cargo || echo "cargo not found yet"
+          ls ~/.cargo/ 2>/dev/null || echo "~/.cargo does not exist"
+          ls $CARGO_HOME/ 2>/dev/null || echo "CARGO_HOME does not exist"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -54,9 +77,6 @@ jobs:
 
       - name: Install dependencies (npm)
         run: npm ci
-
-      - name: Nuke cargo registry cache
-        run: rm -rf ~/.cargo/registry/src
 
       - name: Clear Rust build cache
         run: cargo clean
