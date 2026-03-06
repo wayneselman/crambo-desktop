@@ -1,0 +1,32 @@
+build command for `crambo-desktop v0.1.0 (D:\a\crambo-desktop\crambo-desktop\crambo-desktop\src-tauri)`
+
+Caused by:
+  process didn't exit successfully: `D:\a\crambo-desktop\crambo-desktop\crambo-desktop\src-tauri\target\release\build\crambo-desktop-3b3cb2c982b213a0\build-script-build` (exit code: 101)
+  --- stdout
+  cargo:rerun-if-env-changed=TAURI_CONFIG
+  cargo:rustc-check-cfg=cfg(desktop)
+  cargo:rustc-cfg=desktop
+  cargo:rustc-check-cfg=cfg(mobile)
+  cargo:rerun-if-changed=D:\a\crambo-desktop\crambo-desktop\crambo-desktop\src-tauri\tauri.conf.json
+  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_APP_NAME=desktop
+  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_PREFIX=com_crambo
+  cargo:rustc-check-cfg=cfg(dev)
+  cargo:PERMISSION_FILES_PATH=D:\a\crambo-desktop\crambo-desktop\crambo-desktop\src-tauri\target\release\build\crambo-desktop-6af19fd63a2e255d\out\app-manifest\__app__-permission-files
+  cargo:rerun-if-changed=capabilities
+  cargo:rerun-if-env-changed=REMOVE_UNUSED_COMMANDS
+  cargo:rustc-env=TAURI_ENV_TARGET_TRIPLE=x86_64-pc-windows-msvc
+  package.metadata does not exist
+  Microsoft (R) Windows (R) Resource Compiler Version 10.0.10011.16384
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+
+  D:\a\crambo-desktop\crambo-desktop\crambo-desktop\src-tauri\target\release\build\crambo-desktop-6af19fd63a2e255d\out\resource.rc(26) : error RC2175 : resource file D:\a\crambo-desktop\crambo-desktop\crambo-desktop\src-tauri\icons\icon.ico is not in 3.00 format
+
+  --- stderr
+
+  thread 'main' (3760) panicked at C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-winres-0.3.5\src\lib.rs:536:14:
+  called `Result::unwrap()` on an `Err` value: Failed("RC.EXE failed to compile specified resource file")
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+warning: build failed, waiting for other jobs to finish...
+failed to build app: failed to build app
+       Error failed to build app: failed to build app
+Error: Command "npm ["run","tauri","build"]" failed with exit code 1
