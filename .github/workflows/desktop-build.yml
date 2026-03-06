@@ -43,44 +43,26 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Nuke all cargo registry caches
-        run: |
-          rm -rf ~/.cargo/registry/src || true
-          rm -rf $CARGO_HOME/registry/src || true
-          rm -rf ~/.cargo/registry/cache || true
-          rm -rf $CARGO_HOME/registry/cache || true
-          find /Users/runner /home/runner -name "audiopus_sys*" -type d 2>/dev/null | xargs rm -rf || true
-          echo "Cargo home is: $CARGO_HOME"
-          echo "Home is: $HOME"
-
-      - name: Verify audiopus gone
-        run: |
-          find / -name "audiopus_sys*" -type d 2>/dev/null || echo "Clean - no audiopus found"
-
-      - name: Debug environment
-        run: |
-          echo "CARGO_HOME=$CARGO_HOME"
-          echo "HOME=$HOME"
-          echo "PATH=$PATH"
-          which cargo || echo "cargo not found yet"
-          ls ~/.cargo/ 2>/dev/null || echo "~/.cargo does not exist"
-          ls $CARGO_HOME/ 2>/dev/null || echo "CARGO_HOME does not exist"
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: crambo-desktop/src-tauri
+          key: clean-v1
+
       - name: Install system dependencies (macOS)
         if: matrix.platform == 'macos-latest'
-        run: brew install pkg-config
+        run: |
+          brew install pkg-config opus cmake
+          echo "PKG_CONFIG_PATH=$(brew --prefix opus)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
 
       - name: Install dependencies (npm)
         run: npm ci
-
-      - name: Clear Rust build cache
-        run: cargo clean
-        working-directory: crambo-desktop/src-tauri
 
       - name: Install Apple certificate (macOS only)
         if: matrix.platform == 'macos-latest' && env.APPLE_CERTIFICATE != ''
@@ -104,6 +86,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+          PKG_CONFIG_ALLOW_CROSS: "1"
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE || '' }}
