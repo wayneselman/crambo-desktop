@@ -48,11 +48,16 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
         with:
-          workspaces: crambo-desktop/src-tauri
-          key: v2
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crambo-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-bust3-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-bust3-
 
       - name: Install system dependencies (macOS)
         if: matrix.platform == 'macos-latest'
