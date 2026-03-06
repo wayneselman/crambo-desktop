@@ -28,3 +28,6 @@ args = "cd crambo-desktop/src-tauri && cargo check 2>&1; echo 'Build check compl
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[deployment]
+deploymentTarget = "cloudrun"
