@@ -9,7 +9,7 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-deep-link = "2"
 cpal = "0.15"
-opus = "0.3"
+hound = "3.5"
 screenshots = "0.8"
 keyring = "2"
 sysinfo = "0.30"

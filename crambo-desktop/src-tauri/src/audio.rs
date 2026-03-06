@@ -1,6 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
-use std::io::Write;
 use tauri::command;
 use tempfile::NamedTempFile;
 
@@ -91,14 +90,25 @@ pub fn start_recording(mode: String) -> Result<(), String> {
         .default_input_config()
         .map_err(|e| format!("Failed to get input config: {}", e))?;
 
-    guard.sample_rate = config.sample_rate().0;
-    guard.channels = config.channels();
+    let sample_rate = config.sample_rate().0;
+    let channels = config.channels();
+    guard.sample_rate = sample_rate;
+    guard.channels = channels;
 
-    let temp_file =
-        NamedTempFile::new().map_err(|e| format!("Failed to create temp file: {}", e))?;
+    let wav_spec = hound::WavSpec {
+        channels,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let temp_file = NamedTempFile::with_suffix(".wav")
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
     let temp_path = temp_file.path().to_path_buf();
 
-    let writer = Arc::new(Mutex::new(temp_file));
+    let wav_writer = hound::WavWriter::create(temp_file.path(), wav_spec)
+        .map_err(|e| format!("Failed to create WAV writer: {}", e))?;
+    let writer = Arc::new(Mutex::new(wav_writer));
     let writer_clone = Arc::clone(&writer);
 
     let stop_flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -114,16 +124,12 @@ pub fn start_recording(mode: String) -> Result<(), String> {
                     .build_input_stream(
                         &config.into(),
                         move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                            let bytes: Vec<u8> = data
-                                .iter()
-                                .flat_map(|sample| {
+                            if let Ok(mut w) = wc.lock() {
+                                for &sample in data {
                                     let clamped = sample.clamp(-1.0, 1.0);
                                     let as_i16 = (clamped * 32767.0) as i16;
-                                    as_i16.to_le_bytes()
-                                })
-                                .collect();
-                            if let Ok(mut file) = wc.lock() {
-                                let _ = file.write_all(&bytes);
+                                    let _ = w.write_sample(as_i16);
+                                }
                             }
                         },
                         move |err| {
@@ -139,12 +145,10 @@ pub fn start_recording(mode: String) -> Result<(), String> {
                     .build_input_stream(
                         &config.into(),
                         move |data: &[i16], _: &cpal::InputCallbackInfo| {
-                            let bytes: Vec<u8> = data
-                                .iter()
-                                .flat_map(|sample| sample.to_le_bytes())
-                                .collect();
-                            if let Ok(mut file) = wc.lock() {
-                                let _ = file.write_all(&bytes);
+                            if let Ok(mut w) = wc.lock() {
+                                for &sample in data {
+                                    let _ = w.write_sample(sample);
+                                }
                             }
                         },
                         move |err| {
@@ -163,6 +167,10 @@ pub fn start_recording(mode: String) -> Result<(), String> {
                 std::thread::sleep(std::time::Duration::from_millis(100));
             }
             drop(stream);
+        }
+
+        if let Ok(mut w) = writer_clone.lock() {
+            let _ = w.flush();
         }
     });
 
@@ -186,107 +194,19 @@ pub fn stop_recording() -> Result<String, String> {
         signal.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    std::thread::sleep(std::time::Duration::from_millis(300));
 
-    let pcm_path = guard
+    let wav_path = guard
         .temp_file
         .take()
         .ok_or_else(|| "No temp file found".to_string())?;
 
-    let sample_rate = guard.sample_rate;
-    let channels = guard.channels;
     guard.is_recording = false;
 
     crate::tray::set_recording_state(false);
 
-    let pcm_data = std::fs::read(&pcm_path)
-        .map_err(|e| format!("Failed to read PCM data: {}", e))?;
-    let _ = std::fs::remove_file(&pcm_path);
-
-    let samples: Vec<i16> = pcm_data
-        .chunks_exact(2)
-        .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
-        .collect();
-
-    match encode_opus(&samples, sample_rate, channels) {
-        Ok(opus_path) => Ok(opus_path),
-        Err(_) => {
-            let wav_path = write_wav(&pcm_data, sample_rate, channels)?;
-            Ok(wav_path)
-        }
-    }
-}
-
-fn encode_opus(samples: &[i16], sample_rate: u32, channels: u16) -> Result<String, String> {
-    let opus_channels = if channels >= 2 {
-        opus::Channels::Stereo
-    } else {
-        opus::Channels::Mono
-    };
-
-    let mut encoder = opus::Encoder::new(sample_rate, opus_channels, opus::Application::Audio)
-        .map_err(|e| format!("Opus encoder error: {}", e))?;
-
-    let frame_size = (sample_rate as usize / 50) * channels as usize;
-    let mut encoded_frames: Vec<Vec<u8>> = Vec::new();
-
-    for chunk in samples.chunks(frame_size) {
-        let mut padded = chunk.to_vec();
-        if padded.len() < frame_size {
-            padded.resize(frame_size, 0);
-        }
-        let mut output = vec![0u8; 4000];
-        match encoder.encode(&padded, &mut output) {
-            Ok(len) => {
-                output.truncate(len);
-                encoded_frames.push(output);
-            }
-            Err(_) => continue,
-        }
-    }
-
-    let mut out_file = NamedTempFile::with_suffix(".opus")
-        .map_err(|e| format!("Temp file error: {}", e))?;
-    for frame in &encoded_frames {
-        let len_bytes = (frame.len() as u32).to_le_bytes();
-        out_file.write_all(&len_bytes).map_err(|e| format!("Write error: {}", e))?;
-        out_file.write_all(frame).map_err(|e| format!("Write error: {}", e))?;
-    }
-
-    let path = out_file.into_temp_path();
-    let final_path = path.to_string_lossy().to_string();
-    let _ = path.keep();
-
-    Ok(final_path)
-}
-
-fn write_wav(pcm_data: &[u8], sample_rate: u32, channels: u16) -> Result<String, String> {
-    let mut out_file = NamedTempFile::with_suffix(".wav")
-        .map_err(|e| format!("Temp file error: {}", e))?;
-
-    let data_len = pcm_data.len() as u32;
-    let file_len = 36 + data_len;
-    let byte_rate = sample_rate * channels as u32 * 2;
-    let block_align = channels * 2;
-
-    out_file.write_all(b"RIFF").map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&file_len.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(b"WAVE").map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(b"fmt ").map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&16u32.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&1u16.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&channels.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&sample_rate.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&byte_rate.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&block_align.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&16u16.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(b"data").map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(&data_len.to_le_bytes()).map_err(|e| format!("Write error: {}", e))?;
-    out_file.write_all(pcm_data).map_err(|e| format!("Write error: {}", e))?;
-
-    let path = out_file.into_temp_path();
-    let final_path = path.to_string_lossy().to_string();
-    let _ = path.keep();
-
-    Ok(final_path)
+    wav_path
+        .to_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Invalid path".to_string())
 }

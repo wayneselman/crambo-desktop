@@ -32,13 +32,7 @@ pub async fn upload_session(
         .await
         .map_err(|e| format!("Failed to read audio file: {}", e))?;
 
-    let (file_name, mime_type) = if audio_path.ends_with(".opus") {
-        ("recording.opus", "audio/opus")
-    } else if audio_path.ends_with(".webm") {
-        ("recording.webm", "audio/webm")
-    } else {
-        ("recording.wav", "audio/wav")
-    };
+    let (file_name, mime_type) = ("recording.wav", "audio/wav");
 
     let audio_part = multipart::Part::bytes(audio_bytes)
         .file_name(file_name.to_string())
