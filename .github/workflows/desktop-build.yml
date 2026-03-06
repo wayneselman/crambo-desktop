@@ -52,6 +52,7 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: crambo-desktop/src-tauri
+          key: v2
 
       - name: Install system dependencies (macOS)
         if: matrix.platform == 'macos-latest'
@@ -59,6 +60,10 @@ jobs:
 
       - name: Install dependencies (npm)
         run: npm ci
+
+      - name: Clear Rust cache
+        run: cargo clean
+        working-directory: crambo-desktop/src-tauri
 
       - name: Install Apple certificate (macOS only)
         if: matrix.platform == 'macos-latest' && env.APPLE_CERTIFICATE != ''
