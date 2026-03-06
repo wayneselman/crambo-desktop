@@ -48,17 +48,6 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            crambo-desktop/src-tauri/target
-          key: ${{ runner.os }}-cargo-bust3-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-bust3-
-
       - name: Install system dependencies (macOS)
         if: matrix.platform == 'macos-latest'
         run: brew install pkg-config
@@ -66,7 +55,10 @@ jobs:
       - name: Install dependencies (npm)
         run: npm ci
 
-      - name: Clear Rust cache
+      - name: Nuke cargo registry cache
+        run: rm -rf ~/.cargo/registry/src
+
+      - name: Clear Rust build cache
         run: cargo clean
         working-directory: crambo-desktop/src-tauri
 
