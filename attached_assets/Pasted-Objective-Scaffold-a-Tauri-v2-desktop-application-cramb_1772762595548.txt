@@ -1,0 +1,93 @@
+Objective
+Scaffold a Tauri v2 desktop application (crambo-desktop/) that wraps the Crambo web UI and adds native system audio capture for Mac and Windows. Includes deep link scheme (crambo://), device name detection, exact multipart upload field names, and GitHub Actions cross-platform build pipeline.
+
+Tasks
+T001: Install Rust toolchain and scaffold Tauri v2 project
+Blocked By: []
+Details:
+Install Rust via Replit's package management
+Create crambo-desktop/ directory at project root
+Create crambo-desktop/package.json with Tauri dev/build scripts
+Create crambo-desktop/src-tauri/Cargo.toml with all dependencies:
+tauri v2 (tray-icon, shell-open, deep-link features)
+cpal 0.15, opus 0.3, screenshots 0.8, keyring 2, sysinfo 0.30
+hostname, tokio, serde, serde_json, reqwest (for multipart upload)
+Create crambo-desktop/src-tauri/tauri.conf.json with:
+App name "Crambo", window 800x600, hidden on start
+System tray enabled with icon states
+Deep link: crambo:// scheme
+macOS entitlements for microphone, screen recording, camera
+Create minimal frontend placeholder at crambo-desktop/src/index.html
+Files: crambo-desktop/ (new directory)
+Acceptance: Project structure matches spec, Cargo.toml compiles (syntax check)
+T002: Implement Rust modules — storage.rs + main.rs
+Blocked By: [T001]
+Details:
+storage.rs: Secure token storage using keyring crate
+save_token(token), get_token(), delete_token() Tauri commands
+main.rs: App entry point
+Register all Tauri commands
+Set up system tray
+Handle deep link (crambo://auth?token=...) for auth flow
+Pass device name from hostname::get() on connect
+Files: crambo-desktop/src-tauri/src/main.rs, crambo-desktop/src-tauri/src/storage.rs
+Acceptance: Compiles, commands registered
+T003: Implement Rust modules — audio.rs
+Blocked By: [T001]
+Details:
+System audio capture using cpal crate
+Mac: CoreAudio backend, default input device, BlackHole for system audio if available
+Windows: WASAPI backend, loopback capture for system audio, mic on separate stream
+Tauri commands: start_recording(mode: String), stop_recording() -> String (returns file path)
+Output format: WebM/Opus via opus crate, or raw PCM to temp file
+Scaffold chunk hook for progressive upload (v2)
+Files: crambo-desktop/src-tauri/src/audio.rs
+Acceptance: Compiles, start/stop commands defined
+T004: Implement Rust modules — screen.rs + detector.rs + tray.rs
+Blocked By: [T001]
+Details:
+screen.rs: Screenshot capture using screenshots crate
+capture_screenshot() -> Vec<u8> (JPEG bytes)
+Called by JS frontend on configurable interval
+detector.rs: Meeting app detection using sysinfo crate
+detect_meeting_app() -> Option<String>
+Poll running processes for Zoom, Meet (Chrome), Teams, Webex
+Emit Tauri event to frontend when detected
+tray.rs: System tray setup
+Two icon states: idle (standard icon), recording (red dot)
+Menu items: Start Recording, Stop Recording, Open Crambo, Quit
+Files: crambo-desktop/src-tauri/src/screen.rs, crambo-desktop/src-tauri/src/detector.rs, crambo-desktop/src-tauri/src/tray.rs
+Acceptance: All modules compile
+T005: Implement upload module — uploader.rs
+Blocked By: [T001]
+Details:
+Multipart upload to POST /api/ingest/desktop using reqwest
+Exact field names per spec:
+audio (required) — WebM/Opus file
+video (optional)
+screenshot_0, screenshot_1...screenshot_N (optional)
+title (required), course, duration, captured_at, device_name (optional)
+Authorization: Bearer header
+Tauri command: upload_session(audio_path, title, course, duration, captured_at, device_name, screenshot_paths, token)
+Status polling: poll_status(lecture_id, token) -> StatusResponse
+Files: crambo-desktop/src-tauri/src/uploader.rs
+Acceptance: Compiles, correct field names
+T006: GitHub Actions cross-platform build pipeline
+Blocked By: [T001]
+Details:
+Create .github/workflows/desktop-build.yml
+Matrix strategy: macOS (universal-apple-darwin) + Windows (x86_64-pc-windows-msvc)
+Steps: checkout, setup Node 20, setup Rust, install deps, build frontend, build Tauri, upload artifacts
+Secrets: TAURI_SIGNING_PRIVATE_KEY, Apple signing secrets for macOS
+Artifact retention: 30 days
+Add README section documenting required GitHub secrets
+Files: crambo-desktop/.github/workflows/desktop-build.yml
+Acceptance: Valid YAML workflow
+T007: Update replit.md + finalize
+Blocked By: [T002, T003, T004, T005, T006]
+Details:
+Update replit.md with desktop app section
+Verify all files are in place
+Ensure Cargo.toml syntax is valid
+Files: replit.md
+Acceptance: Documentation accurate, project ready for local Tauri dev
