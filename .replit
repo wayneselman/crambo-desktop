@@ -1,0 +1,30 @@
+modules = ["rust-stable", "nodejs-20"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+packages = ["pkg-config", "glib", "gtk3", "webkitgtk_4_1", "libsoup_3", "alsa-lib", "openssl", "libayatana-appindicator", "dbus", "libopus"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd crambo-desktop/src-tauri && cargo check 2>&1; echo 'Build check complete. Crambo Desktop is a native app — run locally with: cd crambo-desktop && npm run dev'"
+
+[workflows.workflow.metadata]
+outputType = "console"

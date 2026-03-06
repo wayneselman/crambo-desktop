@@ -1,0 +1,9 @@
+target/
+node_modules/
+dist/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+crambo-desktop/src-tauri/target/
+crambo-desktop/node_modules/

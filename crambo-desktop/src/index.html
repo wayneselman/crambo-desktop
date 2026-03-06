@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crambo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+        p {
+            color: #888;
+            margin-bottom: 2rem;
+        }
+        .status {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 999px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            font-size: 0.875rem;
+            color: #aaa;
+        }
+        .status.recording {
+            background: #2e1a1a;
+            border-color: #ff4444;
+            color: #ff6666;
+        }
+        #controls {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+        button:hover { background: #2a2a2a; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary {
+            background: #1a3a5c;
+            border-color: #2a6cb8;
+            color: #6cb4ff;
+        }
+        button.danger {
+            background: #3a1a1a;
+            border-color: #b82a2a;
+            color: #ff6666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Crambo</h1>
+        <p>Desktop Audio Capture</p>
+        <div id="status" class="status">Idle — ready to record</div>
+        <div id="controls">
+            <button id="btn-start" class="primary" onclick="startRecording()">Start Recording</button>
+            <button id="btn-stop" class="danger" disabled onclick="stopRecording()">Stop Recording</button>
+        </div>
+        <p id="info" style="margin-top: 1.5rem; font-size: 0.8rem;"></p>
+    </div>
+    <script>
+        const { invoke } = window.__TAURI__.core;
+
+        async function startRecording() {
+            try {
+                await invoke("start_recording", { mode: "system" });
+                document.getElementById("status").textContent = "Recording...";
+                document.getElementById("status").className = "status recording";
+                document.getElementById("btn-start").disabled = true;
+                document.getElementById("btn-stop").disabled = false;
+            } catch (e) {
+                document.getElementById("info").textContent = "Error: " + e;
+            }
+        }
+
+        async function stopRecording() {
+            try {
+                const filePath = await invoke("stop_recording");
+                document.getElementById("status").textContent = "Idle — ready to record";
+                document.getElementById("status").className = "status";
+                document.getElementById("btn-start").disabled = false;
+                document.getElementById("btn-stop").disabled = true;
+                document.getElementById("info").textContent = "Saved: " + filePath;
+            } catch (e) {
+                document.getElementById("info").textContent = "Error: " + e;
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const app = await invoke("detect_meeting_app");
+                if (app) {
+                    document.getElementById("info").textContent = "Detected: " + app;
+                }
+            } catch (_) {}
+        });
+    </script>
+</body>
+</html>
