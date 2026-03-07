@@ -135,6 +135,18 @@
             color: #6cb4ff;
             margin-top: 0.5rem;
         }
+        #debug-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #111;
+            border-top: 1px solid #333;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+            color: #666;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -158,10 +170,29 @@
         </div>
         <p id="info"></p>
     </div>
+    <div id="debug-bar">Initializing...</div>
 
     <script>
-        const { invoke } = window.__TAURI__.core;
-        const { listen } = window.__TAURI__.event;
+        const TAURI = window.__TAURI_INTERNALS__;
+
+        function invoke(cmd, args) {
+            if (!TAURI) {
+                return Promise.reject("Tauri runtime not available");
+            }
+            return TAURI.invoke(cmd, args || {});
+        }
+
+        function listen(event, handler) {
+            if (!TAURI) return;
+            const callbackId = TAURI.transformCallback(function(payload) {
+                handler({ payload: payload, event: event });
+            });
+            return invoke("plugin:event|listen", {
+                event: event,
+                target: { kind: "Any" },
+                handler: callbackId,
+            });
+        }
 
         let isRecording = false;
         let isUploading = false;
@@ -179,6 +210,11 @@
 
         function setInfo(text) {
             $("info").textContent = text;
+        }
+
+        function setDebug(text) {
+            $("debug-bar").textContent = text;
+            console.log("[crambo]", text);
         }
 
         function formatDuration(ms) {
@@ -217,24 +253,28 @@
                     $("auth-status").className = "auth-status connected";
                     $("btn-connect").style.display = "none";
                     $("btn-disconnect").style.display = "inline-block";
+                    setDebug("Auth: connected");
                 } else {
                     authToken = null;
                     $("auth-status").textContent = "Not connected — recordings will be saved locally";
                     $("auth-status").className = "auth-status";
                     $("btn-connect").style.display = "inline-block";
                     $("btn-disconnect").style.display = "none";
+                    setDebug("Auth: no token stored");
                 }
-            } catch (_) {
+            } catch (e) {
                 authToken = null;
+                setDebug("Auth check error: " + e);
             }
         }
 
         async function connectAccount() {
             try {
-                const { open } = window.__TAURI__.shell;
-                await open("https://app.crambo.ai/desktop/connect");
+                setDebug("Opening browser for auth...");
+                await invoke("plugin:shell|open", { path: "https://app.crambo.ai/desktop/connect" });
             } catch (e) {
                 setInfo("Error opening browser: " + e);
+                setDebug("Shell open error: " + e);
             }
         }
 
@@ -246,12 +286,14 @@
                 setInfo("Disconnected from Crambo");
             } catch (e) {
                 setInfo("Error: " + e);
+                setDebug("Disconnect error: " + e);
             }
         }
 
         async function startRecording() {
             if (isRecording) return;
             try {
+                setDebug("Starting recording (system mode)...");
                 await invoke("start_recording", { mode: "system" });
                 isRecording = true;
                 setStatus("Recording...", "recording");
@@ -259,8 +301,10 @@
                 $("btn-stop").disabled = false;
                 startTimer();
                 setInfo("");
+                setDebug("Recording started");
             } catch (e) {
                 setInfo("Error: " + e);
+                setDebug("Start recording error: " + e);
             }
         }
 
@@ -272,16 +316,21 @@
 
                 setStatus("Stopping...", "uploading");
                 $("btn-stop").disabled = true;
+                setDebug("Stopping recording...");
 
                 const audioPath = await invoke("stop_recording");
                 isRecording = false;
+                setDebug("Audio saved: " + audioPath);
 
                 setStatus("Capturing screenshots...", "uploading");
                 let screenshotPaths = [];
                 try {
                     const screenshotPath = await invoke("capture_screenshot");
                     screenshotPaths.push(screenshotPath);
-                } catch (_) {}
+                    setDebug("Screenshot captured: " + screenshotPath);
+                } catch (e) {
+                    setDebug("Screenshot skipped: " + e);
+                }
 
                 let deviceName = "Unknown";
                 try {
@@ -294,6 +343,7 @@
                 if (authToken) {
                     setStatus("Uploading...", "uploading");
                     setInfo("Uploading session to Crambo...");
+                    setDebug("Uploading to server...");
 
                     const result = await invoke("upload_session", {
                         audioPath: audioPath,
@@ -308,6 +358,7 @@
 
                     setStatus("Processing...", "processing");
                     setInfo("Session uploaded. Processing...");
+                    setDebug("Upload complete, polling: " + result.lecture_id);
 
                     pollForCompletion(result.lecture_id);
                 } else {
@@ -315,6 +366,7 @@
                     setInfo("Audio saved to: " + audioPath + ". Connect to Crambo to upload.");
                     $("btn-start").disabled = false;
                     $("btn-stop").disabled = true;
+                    setDebug("Saved locally (no auth): " + audioPath);
 
                     setTimeout(() => {
                         setStatus("Idle — ready to record");
@@ -327,6 +379,7 @@
                 $("btn-start").disabled = false;
                 $("btn-stop").disabled = true;
                 setInfo("Error: " + e);
+                setDebug("Stop recording error: " + e);
             }
         }
 
@@ -377,18 +430,8 @@
 
         async function fireNotification(body) {
             try {
-                const notif = window.__TAURI_PLUGIN_NOTIFICATION__;
-                if (notif) {
-                    let granted = await notif.isPermissionGranted();
-                    if (!granted) {
-                        const perm = await notif.requestPermission();
-                        granted = perm === "granted";
-                    }
-                    if (granted) {
-                        await notif.sendNotification({ title: "Crambo", body: body });
-                        return;
-                    }
-                }
+                await invoke("plugin:notification|notify", { title: "Crambo", body: body });
+                return;
             } catch (_) {}
             try {
                 if (Notification.permission === "granted") {
@@ -404,6 +447,15 @@
         window.__tauriStopRecording = stopRecording;
 
         window.addEventListener("DOMContentLoaded", async () => {
+            const hasTauri = !!TAURI;
+            const hasInvoke = !!(TAURI && TAURI.invoke);
+            setDebug("Tauri: " + (hasTauri ? "YES" : "NO") + " | invoke: " + (hasInvoke ? "YES" : "NO"));
+
+            if (!hasTauri) {
+                setInfo("Error: Tauri runtime not detected. This app must be run via Tauri.");
+                return;
+            }
+
             await checkAuth();
 
             try {
@@ -426,6 +478,8 @@
             listen("tray-stop-recording", () => {
                 if (isRecording) stopRecording();
             });
+
+            setDebug("Ready — Tauri connected");
         });
     </script>
 </body>
