@@ -1,0 +1,65 @@
+  id: 08b60934-8f36-4915-a71b-cd4be52b9f0f
+  status: Invalid
+wayneselman@MacBookPro Downloads % xcrun notarytool log 08b60934-8f36-4915-a71b-cd4be52b9f0f --apple-id wayne.selman@gmail.com --password vbxo-alzv-rbyz-ahkw --team-id 27ZSFN233J
+{
+  "logFormatVersion": 1,
+  "jobId": "08b60934-8f36-4915-a71b-cd4be52b9f0f",
+  "status": "Invalid",
+  "statusSummary": "Archive contains critical validation errors",
+  "statusCode": 4000,
+  "archiveFilename": "Crambo.zip",
+  "uploadDate": "2026-03-07T23:39:26.750Z",
+  "sha256": "b62424e087291791c3104885fea2de741fb4f48cf177d5108735228ea26e70c3",
+  "ticketContents": null,
+  "issues": [
+    {
+      "severity": "error",
+      "code": null,
+      "path": "Crambo.zip/Crambo.app/Contents/MacOS/crambo-desktop",
+      "message": "The binary is not signed.",
+      "docUrl": "https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues#3087721",
+      "architecture": "x86_64"
+    },
+    {
+      "severity": "error",
+      "code": null,
+      "path": "Crambo.zip/Crambo.app/Contents/MacOS/crambo-desktop",
+      "message": "The signature does not include a secure timestamp.",
+      "docUrl": "https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues#3087733",
+      "architecture": "x86_64"
+    },
+    {
+      "severity": "error",
+      "code": null,
+      "path": "Crambo.zip/Crambo.app/Contents/MacOS/crambo-desktop",
+      "message": "The executable does not have the hardened runtime enabled.",
+      "docUrl": "https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues#3087724",
+      "architecture": "x86_64"
+    },
+    {
+      "severity": "error",
+      "code": null,
+      "path": "Crambo.zip/Crambo.app/Contents/MacOS/crambo-desktop",
+      "message": "The signature of the binary is invalid.",
+      "docUrl": "https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues#3087735",
+      "architecture": "arm64"
+    },
+    {
+      "severity": "error",
+      "code": null,
+      "path": "Crambo.zip/Crambo.app/Contents/MacOS/crambo-desktop",
+      "message": "The signature does not include a secure timestamp.",
+      "docUrl": "https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues#3087733",
+      "architecture": "arm64"
+    },
+    {
+      "severity": "error",
+      "code": null,
+      "path": "Crambo.zip/Crambo.app/Contents/MacOS/crambo-desktop",
+      "message": "The executable does not have the hardened runtime enabled.",
+      "docUrl": "https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues#3087724",
+      "architecture": "arm64"
+    }
+  ]
+}
+wayneselman@MacBookPro Downloads % 
