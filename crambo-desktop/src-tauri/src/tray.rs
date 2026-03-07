@@ -41,9 +41,11 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = Menu::with_items(app, &[&start_item, &stop_item, &open_item, &quit_item])?;
 
-    let icon = Image::from_path("icons/icon.png")
-        .or_else(|_| Image::from_path("icons/32x32.png"))
-        .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../../icons/icon.png")).expect("Failed to load tray icon"));
+    let icon_bytes = include_bytes!("../icons/icon.png");
+    let img = image::load_from_memory(icon_bytes).expect("Failed to decode tray icon");
+    let rgba = img.to_rgba8();
+    let (width, height) = (rgba.width(), rgba.height());
+    let icon = Image::new_owned(rgba.into_raw(), width, height);
 
     let tray = TrayIconBuilder::new()
         .icon(icon)

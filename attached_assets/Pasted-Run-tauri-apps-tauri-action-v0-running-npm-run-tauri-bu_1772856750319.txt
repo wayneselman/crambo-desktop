@@ -1,0 +1,77 @@
+Run tauri-apps/tauri-action@v0
+running npm [ 'run', 'tauri', 'build', '--', '--target', 'universal-apple-darwin' ]
+
+> crambo-desktop@0.1.0 tauri
+> tauri build --target universal-apple-darwin
+
+        Info Looking up installed tauri packages to check mismatched versions...
+    Updating crates.io index
+   Compiling crambo-desktop v0.1.0 (/Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri)
+error: couldn't read `src/../../icons/icon.png`: No such file or directory (os error 2)
+  --> src/tray.rs:46:47
+   |
+46 |         .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../../icons/icon.png")).expect("Failed to load tray icon"));
+   |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: there is a file with the same name in a different directory
+   |
+46 -         .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../../icons/icon.png")).expect("Failed to load tray icon"));
+46 +         .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/icon.png")).expect("Failed to load tray icon"));
+   |
+
+error[E0599]: no function or associated item named `from_path` found for struct `Image<'a>` in the current scope
+  --> src/tray.rs:44:23
+   |
+44 |     let icon = Image::from_path("icons/icon.png")
+   |                       ^^^^^^^^^ function or associated item not found in `Image<'_>`
+   |
+note: if you're trying to build a new `Image<'_>` consider using one of the following associated functions:
+      Image::<'static>::new_owned
+      Image::<'a>::new
+  --> /Users/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.10.3/src/image/mod.rs:52:3
+   |
+52 |   pub const fn new_owned(rgba: Vec<u8>, width: u32, height: u32) -> Self {
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+63 |   pub const fn new(rgba: &'a [u8], width: u32, height: u32) -> Self {
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no function or associated item named `from_path` found for struct `Image<'a>` in the current scope
+  --> src/tray.rs:45:29
+   |
+45 |         .or_else(|_| Image::from_path("icons/32x32.png"))
+   |                             ^^^^^^^^^ function or associated item not found in `Image<'_>`
+   |
+note: if you're trying to build a new `Image<'_>` consider using one of the following associated functions:
+      Image::<'static>::new_owned
+      Image::<'a>::new
+  --> /Users/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.10.3/src/image/mod.rs:52:3
+   |
+52 |   pub const fn new_owned(rgba: Vec<u8>, width: u32, height: u32) -> Self {
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+63 |   pub const fn new(rgba: &'a [u8], width: u32, height: u32) -> Self {
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no function or associated item named `from_bytes` found for struct `Image<'a>` in the current scope
+  --> src/tray.rs:46:36
+   |
+46 |         .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../../icons/icon.png")).expect("Failed to load tray icon"));
+   |                                    ^^^^^^^^^^ function or associated item not found in `Image<'_>`
+   |
+note: if you're trying to build a new `Image<'_>` consider using one of the following associated functions:
+      Image::<'static>::new_owned
+      Image::<'a>::new
+  --> /Users/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.10.3/src/image/mod.rs:52:3
+   |
+52 |   pub const fn new_owned(rgba: Vec<u8>, width: u32, height: u32) -> Self {
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+63 |   pub const fn new(rgba: &'a [u8], width: u32, height: u32) -> Self {
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `crambo-desktop` (bin "crambo-desktop") due to 4 previous errors
+failed to build aarch64-apple-darwin binary: failed to build app
+       Error failed to build aarch64-apple-darwin binary: failed to build app
+Error: Command "npm ["run","tauri","build","--","--target","universal-apple-darwin"]" failed with exit code 1
