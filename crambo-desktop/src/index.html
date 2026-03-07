@@ -153,7 +153,7 @@
         <div id="detected-app" class="detected-app"></div>
 
         <div id="controls">
-            <button id="btn-start" class="primary" disabled onclick="startRecording()">Start Recording</button>
+            <button id="btn-start" class="primary" onclick="startRecording()">Start Recording</button>
             <button id="btn-stop" class="danger" disabled onclick="stopRecording()">Stop Recording</button>
         </div>
         <p id="info"></p>
@@ -217,14 +217,12 @@
                     $("auth-status").className = "auth-status connected";
                     $("btn-connect").style.display = "none";
                     $("btn-disconnect").style.display = "inline-block";
-                    $("btn-start").disabled = false;
                 } else {
                     authToken = null;
-                    $("auth-status").textContent = "Not connected";
+                    $("auth-status").textContent = "Not connected — recordings will be saved locally";
                     $("auth-status").className = "auth-status";
                     $("btn-connect").style.display = "inline-block";
                     $("btn-disconnect").style.display = "none";
-                    $("btn-start").disabled = true;
                 }
             } catch (_) {
                 authToken = null;
@@ -252,7 +250,7 @@
         }
 
         async function startRecording() {
-            if (isRecording || !authToken) return;
+            if (isRecording) return;
             try {
                 await invoke("start_recording", { mode: "system" });
                 isRecording = true;
@@ -293,24 +291,35 @@
                 const title = detectedApp || "Desktop Recording";
                 const capturedAt = new Date().toISOString();
 
-                setStatus("Uploading...", "uploading");
-                setInfo("Uploading session to Crambo...");
+                if (authToken) {
+                    setStatus("Uploading...", "uploading");
+                    setInfo("Uploading session to Crambo...");
 
-                const result = await invoke("upload_session", {
-                    audioPath: audioPath,
-                    title: title,
-                    course: null,
-                    duration: duration,
-                    capturedAt: capturedAt,
-                    deviceName: deviceName,
-                    screenshotPaths: screenshotPaths.length > 0 ? screenshotPaths : null,
-                    token: authToken,
-                });
+                    const result = await invoke("upload_session", {
+                        audioPath: audioPath,
+                        title: title,
+                        course: null,
+                        duration: duration,
+                        capturedAt: capturedAt,
+                        deviceName: deviceName,
+                        screenshotPaths: screenshotPaths.length > 0 ? screenshotPaths : null,
+                        token: authToken,
+                    });
 
-                setStatus("Processing...", "processing");
-                setInfo("Session uploaded. Processing...");
+                    setStatus("Processing...", "processing");
+                    setInfo("Session uploaded. Processing...");
 
-                pollForCompletion(result.lecture_id);
+                    pollForCompletion(result.lecture_id);
+                } else {
+                    setStatus("Recording saved", "complete");
+                    setInfo("Audio saved to: " + audioPath + ". Connect to Crambo to upload.");
+                    $("btn-start").disabled = false;
+                    $("btn-stop").disabled = true;
+
+                    setTimeout(() => {
+                        setStatus("Idle — ready to record");
+                    }, 5000);
+                }
 
             } catch (e) {
                 isRecording = false;
@@ -411,7 +420,7 @@
             });
 
             listen("tray-start-recording", () => {
-                if (!isRecording && authToken) startRecording();
+                if (!isRecording) startRecording();
             });
 
             listen("tray-stop-recording", () => {
