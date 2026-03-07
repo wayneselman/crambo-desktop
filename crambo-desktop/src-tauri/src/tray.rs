@@ -1,4 +1,5 @@
 use tauri::{
+    image::Image,
     menu::{Menu, MenuItem},
     tray::{TrayIcon, TrayIconBuilder},
     AppHandle, Emitter, Manager,
@@ -40,7 +41,13 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = Menu::with_items(app, &[&start_item, &stop_item, &open_item, &quit_item])?;
 
+    let icon = Image::from_path("icons/icon.png")
+        .or_else(|_| Image::from_path("icons/32x32.png"))
+        .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../../icons/icon.png")).expect("Failed to load tray icon"));
+
     let tray = TrayIconBuilder::new()
+        .icon(icon)
+        .icon_as_template(true)
         .menu(&menu)
         .tooltip("Crambo")
         .on_menu_event(move |app, event| match event.id.as_ref() {
@@ -67,7 +74,6 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             }
             _ => {}
         })
-        .menu_on_left_click(true)
         .build(app)?;
 
     let state = TrayState {
