@@ -1,6 +1,6 @@
 use tauri::{
     menu::{Menu, MenuItem},
-    tray::{TrayIcon, TrayIconBuilder, TrayIconEvent},
+    tray::{TrayIcon, TrayIconBuilder},
     AppHandle, Emitter, Manager,
 };
 use std::sync::Mutex;
@@ -67,15 +67,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             }
             _ => {}
         })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click { .. } = event {
-                let app = tray.app_handle();
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
-            }
-        })
+        .menu_on_left_click(true)
         .build(app)?;
 
     let state = TrayState {
