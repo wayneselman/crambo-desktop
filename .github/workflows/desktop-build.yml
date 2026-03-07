@@ -79,7 +79,7 @@ jobs:
       - name: Install dependencies (npm)
         run: npm ci
 
-      - name: Build Tauri app
+      - name: Build Tauri app (sign only, skip notarization)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -90,14 +90,45 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: crambo-desktop
           args: ${{ matrix.args }}
+
+      - name: Notarize macOS app
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          APP_PATH=$(find src-tauri/target -name "Crambo.app" -path "*/release/bundle/macos/*" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found, skipping notarization"
+            exit 0
+          fi
+          echo "Found app at: $APP_PATH"
+          ZIP_PATH="/tmp/Crambo-notarize.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          for attempt in 1 2 3; do
+            echo "Notarization attempt $attempt of 3..."
+            if xcrun notarytool submit "$ZIP_PATH" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait --timeout 10m 2>&1; then
+              echo "Notarization succeeded!"
+              xcrun stapler staple "$APP_PATH"
+              echo "Stapled notarization ticket to app"
+              exit 0
+            else
+              echo "Attempt $attempt failed, waiting 30s before retry..."
+              sleep 30
+            fi
+          done
+          echo "WARNING: Notarization failed after 3 attempts. App is signed but not notarized."
+          echo "You can notarize locally with: xcrun notarytool submit Crambo.zip --apple-id YOUR_ID --password YOUR_APP_PASSWORD --team-id YOUR_TEAM_ID --wait"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
