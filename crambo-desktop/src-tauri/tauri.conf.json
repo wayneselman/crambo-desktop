@@ -34,7 +34,8 @@
     ],
     "macOS": {
       "entitlements": "./Entitlements.plist",
-      "signingIdentity": null
+      "signingIdentity": null,
+      "urlSchemes": ["crambo"]
     },
     "windows": {
       "certificateThumbprint": null,
