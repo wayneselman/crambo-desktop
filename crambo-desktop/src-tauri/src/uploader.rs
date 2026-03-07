@@ -74,7 +74,7 @@ pub async fn upload_session(
 
     let client = reqwest::Client::new();
     let response = client
-        .post("https://app.crambo.ai/api/ingest/desktop")
+        .post("https://crambo.app/api/ingest/desktop")
         .header("Authorization", format!("Bearer {}", token))
         .multipart(form)
         .send()
@@ -100,7 +100,7 @@ pub async fn upload_session(
 pub async fn poll_status(lecture_id: String, token: String) -> Result<StatusResponse, String> {
     let client = reqwest::Client::new();
     let url = format!(
-        "https://app.crambo.ai/api/ingest/desktop/status/{}",
+        "https://crambo.app/api/ingest/desktop/status/{}",
         lecture_id
     );
 

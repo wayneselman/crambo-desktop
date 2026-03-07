@@ -271,7 +271,7 @@
         async function connectAccount() {
             try {
                 setDebug("Opening browser for auth...");
-                await invoke("plugin:shell|open", { path: "https://app.crambo.ai/desktop/connect" });
+                await invoke("plugin:shell|open", { path: "https://crambo.app/desktop/connect" });
             } catch (e) {
                 setInfo("Error opening browser: " + e);
                 setDebug("Shell open error: " + e);
