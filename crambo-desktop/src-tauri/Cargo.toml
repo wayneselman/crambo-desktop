@@ -8,6 +8,7 @@ description = "Crambo Desktop — native system audio capture for Mac and Window
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-deep-link = "2"
+tauri-plugin-notification = "2"
 cpal = "0.15"
 hound = "3.5"
 screenshots = "0.8"

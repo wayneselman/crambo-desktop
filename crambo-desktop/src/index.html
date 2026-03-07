@@ -18,13 +18,15 @@
         .container {
             text-align: center;
             padding: 2rem;
+            width: 100%;
+            max-width: 480px;
         }
         h1 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
             color: #ffffff;
         }
-        p {
+        .subtitle {
             color: #888;
             margin-bottom: 2rem;
         }
@@ -41,12 +43,38 @@
             background: #2e1a1a;
             border-color: #ff4444;
             color: #ff6666;
+            animation: pulse 2s infinite;
+        }
+        .status.uploading {
+            background: #1a2e1a;
+            border-color: #44aa44;
+            color: #66cc66;
+        }
+        .status.processing {
+            background: #2e2e1a;
+            border-color: #aaaa44;
+            color: #cccc66;
+        }
+        .status.complete {
+            background: #1a2e1a;
+            border-color: #44ff44;
+            color: #66ff66;
+        }
+        .status.error {
+            background: #2e1a1a;
+            border-color: #ff4444;
+            color: #ff6666;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         #controls {
             margin-top: 2rem;
             display: flex;
             gap: 1rem;
             justify-content: center;
+            flex-wrap: wrap;
         }
         button {
             padding: 0.75rem 1.5rem;
@@ -70,54 +98,325 @@
             border-color: #b82a2a;
             color: #ff6666;
         }
+        button.connect {
+            background: #1a3a2a;
+            border-color: #2ab86c;
+            color: #6cffb4;
+        }
+        #info {
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: #888;
+            min-height: 1.2em;
+        }
+        #auth-section {
+            margin-bottom: 1.5rem;
+        }
+        .auth-status {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+        .auth-status.connected {
+            color: #66cc66;
+        }
+        .timer {
+            font-size: 1.5rem;
+            font-variant-numeric: tabular-nums;
+            color: #ff6666;
+            margin-top: 1rem;
+            display: none;
+        }
+        .timer.active {
+            display: block;
+        }
+        .detected-app {
+            font-size: 0.75rem;
+            color: #6cb4ff;
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Crambo</h1>
-        <p>Desktop Audio Capture</p>
+        <p class="subtitle">Desktop Audio Capture</p>
+
+        <div id="auth-section">
+            <div id="auth-status" class="auth-status">Not connected</div>
+            <button id="btn-connect" class="connect" onclick="connectAccount()">Connect to Crambo</button>
+            <button id="btn-disconnect" style="display:none" onclick="disconnectAccount()">Disconnect</button>
+        </div>
+
         <div id="status" class="status">Idle — ready to record</div>
+        <div id="timer" class="timer">00:00</div>
+        <div id="detected-app" class="detected-app"></div>
+
         <div id="controls">
-            <button id="btn-start" class="primary" onclick="startRecording()">Start Recording</button>
+            <button id="btn-start" class="primary" disabled onclick="startRecording()">Start Recording</button>
             <button id="btn-stop" class="danger" disabled onclick="stopRecording()">Stop Recording</button>
         </div>
-        <p id="info" style="margin-top: 1.5rem; font-size: 0.8rem;"></p>
+        <p id="info"></p>
     </div>
+
     <script>
         const { invoke } = window.__TAURI__.core;
+        const { listen } = window.__TAURI__.event;
+
+        let isRecording = false;
+        let isUploading = false;
+        let recordingStartTime = null;
+        let timerInterval = null;
+        let detectedApp = null;
+        let authToken = null;
+
+        const $ = (id) => document.getElementById(id);
+
+        function setStatus(text, cls) {
+            $("status").textContent = text;
+            $("status").className = "status" + (cls ? " " + cls : "");
+        }
+
+        function setInfo(text) {
+            $("info").textContent = text;
+        }
+
+        function formatDuration(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+            const secs = (totalSeconds % 60).toString().padStart(2, "0");
+            return `${mins}:${secs}`;
+        }
+
+        function startTimer() {
+            recordingStartTime = Date.now();
+            $("timer").className = "timer active";
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - recordingStartTime;
+                $("timer").textContent = formatDuration(elapsed);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+            $("timer").className = "timer";
+        }
+
+        function getRecordingDuration() {
+            if (!recordingStartTime) return "0";
+            return Math.floor((Date.now() - recordingStartTime) / 1000).toString();
+        }
+
+        async function checkAuth() {
+            try {
+                const token = await invoke("get_token");
+                if (token) {
+                    authToken = token;
+                    $("auth-status").textContent = "Connected to Crambo";
+                    $("auth-status").className = "auth-status connected";
+                    $("btn-connect").style.display = "none";
+                    $("btn-disconnect").style.display = "inline-block";
+                    $("btn-start").disabled = false;
+                } else {
+                    authToken = null;
+                    $("auth-status").textContent = "Not connected";
+                    $("auth-status").className = "auth-status";
+                    $("btn-connect").style.display = "inline-block";
+                    $("btn-disconnect").style.display = "none";
+                    $("btn-start").disabled = true;
+                }
+            } catch (_) {
+                authToken = null;
+            }
+        }
+
+        async function connectAccount() {
+            try {
+                const { open } = window.__TAURI__.shell;
+                await open("https://app.crambo.ai/desktop/connect");
+            } catch (e) {
+                setInfo("Error opening browser: " + e);
+            }
+        }
+
+        async function disconnectAccount() {
+            try {
+                await invoke("delete_token");
+                authToken = null;
+                await checkAuth();
+                setInfo("Disconnected from Crambo");
+            } catch (e) {
+                setInfo("Error: " + e);
+            }
+        }
 
         async function startRecording() {
+            if (isRecording || !authToken) return;
             try {
                 await invoke("start_recording", { mode: "system" });
-                document.getElementById("status").textContent = "Recording...";
-                document.getElementById("status").className = "status recording";
-                document.getElementById("btn-start").disabled = true;
-                document.getElementById("btn-stop").disabled = false;
+                isRecording = true;
+                setStatus("Recording...", "recording");
+                $("btn-start").disabled = true;
+                $("btn-stop").disabled = false;
+                startTimer();
+                setInfo("");
             } catch (e) {
-                document.getElementById("info").textContent = "Error: " + e;
+                setInfo("Error: " + e);
             }
         }
 
         async function stopRecording() {
+            if (!isRecording) return;
             try {
-                const filePath = await invoke("stop_recording");
-                document.getElementById("status").textContent = "Idle — ready to record";
-                document.getElementById("status").className = "status";
-                document.getElementById("btn-start").disabled = false;
-                document.getElementById("btn-stop").disabled = true;
-                document.getElementById("info").textContent = "Saved: " + filePath;
+                const duration = getRecordingDuration();
+                stopTimer();
+
+                setStatus("Stopping...", "uploading");
+                $("btn-stop").disabled = true;
+
+                const audioPath = await invoke("stop_recording");
+                isRecording = false;
+
+                setStatus("Capturing screenshots...", "uploading");
+                let screenshotPaths = [];
+                try {
+                    const screenshotPath = await invoke("capture_screenshot");
+                    screenshotPaths.push(screenshotPath);
+                } catch (_) {}
+
+                let deviceName = "Unknown";
+                try {
+                    deviceName = await invoke("get_device_name");
+                } catch (_) {}
+
+                const title = detectedApp || "Desktop Recording";
+                const capturedAt = new Date().toISOString();
+
+                setStatus("Uploading...", "uploading");
+                setInfo("Uploading session to Crambo...");
+
+                const result = await invoke("upload_session", {
+                    audioPath: audioPath,
+                    title: title,
+                    course: null,
+                    duration: duration,
+                    capturedAt: capturedAt,
+                    deviceName: deviceName,
+                    screenshotPaths: screenshotPaths.length > 0 ? screenshotPaths : null,
+                    token: authToken,
+                });
+
+                setStatus("Processing...", "processing");
+                setInfo("Session uploaded. Processing...");
+
+                pollForCompletion(result.lecture_id);
+
             } catch (e) {
-                document.getElementById("info").textContent = "Error: " + e;
+                isRecording = false;
+                setStatus("Idle — ready to record", "error");
+                $("btn-start").disabled = false;
+                $("btn-stop").disabled = true;
+                setInfo("Error: " + e);
             }
         }
 
+        async function pollForCompletion(lectureId) {
+            const poll = async () => {
+                try {
+                    const status = await invoke("poll_status", {
+                        lectureId: lectureId,
+                        token: authToken,
+                    });
+
+                    if (status.status === "ready" || status.status === "complete") {
+                        setStatus("Complete!", "complete");
+                        setInfo("Session processed successfully.");
+                        $("btn-start").disabled = false;
+                        $("btn-stop").disabled = true;
+
+                        try {
+                            await fireNotification("Your recording has been processed and is ready to view.");
+                        } catch (_) {}
+
+                        setTimeout(() => {
+                            setStatus("Idle — ready to record");
+                        }, 5000);
+                        return;
+                    }
+
+                    if (status.status === "error" || status.status === "failed") {
+                        setStatus("Processing failed", "error");
+                        setInfo("Error: " + (status.error || "Unknown error"));
+                        $("btn-start").disabled = false;
+                        $("btn-stop").disabled = true;
+                        return;
+                    }
+
+                    const progress = status.progress ? ` (${Math.round(status.progress * 100)}%)` : "";
+                    setStatus("Processing..." + progress, "processing");
+                    setTimeout(poll, 15000);
+
+                } catch (e) {
+                    setInfo("Status check error: " + e + ". Retrying...");
+                    setTimeout(poll, 15000);
+                }
+            };
+
+            setTimeout(poll, 5000);
+        }
+
+        async function fireNotification(body) {
+            try {
+                const notif = window.__TAURI_PLUGIN_NOTIFICATION__;
+                if (notif) {
+                    let granted = await notif.isPermissionGranted();
+                    if (!granted) {
+                        const perm = await notif.requestPermission();
+                        granted = perm === "granted";
+                    }
+                    if (granted) {
+                        await notif.sendNotification({ title: "Crambo", body: body });
+                        return;
+                    }
+                }
+            } catch (_) {}
+            try {
+                if (Notification.permission === "granted") {
+                    new Notification("Crambo", { body: body });
+                } else if (Notification.permission !== "denied") {
+                    const perm = await Notification.requestPermission();
+                    if (perm === "granted") new Notification("Crambo", { body: body });
+                }
+            } catch (_) {}
+        }
+
+        window.__tauriStartRecording = startRecording;
+        window.__tauriStopRecording = stopRecording;
+
         window.addEventListener("DOMContentLoaded", async () => {
+            await checkAuth();
+
             try {
                 const app = await invoke("detect_meeting_app");
                 if (app) {
-                    document.getElementById("info").textContent = "Detected: " + app;
+                    detectedApp = app;
+                    $("detected-app").textContent = "Detected: " + app;
                 }
             } catch (_) {}
+
+            listen("auth-token-received", async () => {
+                await checkAuth();
+                setInfo("Connected to Crambo!");
+            });
+
+            listen("tray-start-recording", () => {
+                if (!isRecording && authToken) startRecording();
+            });
+
+            listen("tray-stop-recording", () => {
+                if (isRecording) stopRecording();
+            });
         });
     </script>
 </body>

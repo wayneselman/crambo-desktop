@@ -1,9 +1,11 @@
 use screenshots::Screen;
 use std::io::Cursor;
 use tauri::command;
+use tempfile::NamedTempFile;
+use std::io::Write;
 
 #[command]
-pub fn capture_screenshot() -> Result<Vec<u8>, String> {
+pub fn capture_screenshot() -> Result<String, String> {
     let screens = Screen::all().map_err(|e| format!("Failed to enumerate screens: {}", e))?;
 
     let screen = screens
@@ -29,5 +31,16 @@ pub fn capture_screenshot() -> Result<Vec<u8>, String> {
         .write_to(&mut jpeg_bytes, image::ImageFormat::Jpeg)
         .map_err(|e| format!("Failed to encode JPEG: {}", e))?;
 
-    Ok(jpeg_bytes.into_inner())
+    let mut temp_file = NamedTempFile::with_suffix(".jpg")
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    temp_file
+        .write_all(&jpeg_bytes.into_inner())
+        .map_err(|e| format!("Failed to write screenshot: {}", e))?;
+
+    let path = temp_file.into_temp_path();
+    let final_path = path.to_string_lossy().to_string();
+    let _ = path.keep();
+
+    Ok(final_path)
 }
