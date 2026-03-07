@@ -157,6 +157,14 @@
         <div id="auth-section">
             <div id="auth-status" class="auth-status">Not connected</div>
             <button id="btn-connect" class="connect" onclick="connectAccount()">Connect to Crambo</button>
+            <div id="manual-entry">
+                <p style="color:#666; font-size:0.75rem; margin:0.75rem 0 0.5rem">Or enter code from browser:</p>
+                <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center">
+                    <input type="text" id="token-code" placeholder="e.g. 4F552009" maxlength="8"
+                        style="padding:0.5rem; border:1px solid #444; border-radius:6px; background:#1a1a1a; color:#e0e0e0; font-size:0.875rem; width:140px; text-align:center; text-transform:uppercase; letter-spacing:0.1em; font-family:monospace" />
+                    <button onclick="submitCode()" style="padding:0.5rem 1rem">Connect</button>
+                </div>
+            </div>
             <button id="btn-disconnect" style="display:none" onclick="disconnectAccount()">Disconnect</button>
         </div>
 
@@ -252,6 +260,7 @@
                     $("auth-status").textContent = "Connected to Crambo";
                     $("auth-status").className = "auth-status connected";
                     $("btn-connect").style.display = "none";
+                    $("manual-entry").style.display = "none";
                     $("btn-disconnect").style.display = "inline-block";
                     setDebug("Auth: connected");
                 } else {
@@ -259,12 +268,33 @@
                     $("auth-status").textContent = "Not connected — recordings will be saved locally";
                     $("auth-status").className = "auth-status";
                     $("btn-connect").style.display = "inline-block";
+                    $("manual-entry").style.display = "block";
                     $("btn-disconnect").style.display = "none";
                     setDebug("Auth: no token stored");
                 }
             } catch (e) {
                 authToken = null;
                 setDebug("Auth check error: " + e);
+            }
+        }
+
+        async function submitCode() {
+            const code = $("token-code").value.trim();
+            if (!code) {
+                setInfo("Please enter a code");
+                return;
+            }
+            try {
+                setDebug("Exchanging code: " + code.toUpperCase() + "...");
+                setInfo("Connecting...");
+                await invoke("set_token_from_code", { code: code });
+                $("token-code").value = "";
+                await checkAuth();
+                setInfo("Connected to Crambo!");
+                setDebug("Auth: connected via code");
+            } catch (e) {
+                setInfo("Error: " + e);
+                setDebug("Code exchange error: " + e);
             }
         }
 

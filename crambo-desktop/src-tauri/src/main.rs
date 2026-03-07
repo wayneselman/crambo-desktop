@@ -49,6 +49,7 @@ fn main() {
             storage::save_token,
             storage::get_token,
             storage::delete_token,
+            storage::set_token_from_code,
             audio::start_recording,
             audio::stop_recording,
             screen::capture_screenshot,
