@@ -1,0 +1,20 @@
+    0x0000001A <uint32>=0x00000001 
+found cert "***" with organization "Wayne Selman"
+     Signing with identity "***"
+Signing with identity "***"
+Signing /Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/universal-apple-darwin/release/bundle/macos/Crambo.app/Contents/MacOS/crambo-desktop
+/Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/universal-apple-darwin/release/bundle/macos/Crambo.app/Contents/MacOS/crambo-desktop: replacing existing signature
+Signing with identity "***"
+Signing /Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/universal-apple-darwin/release/bundle/macos/Crambo.app
+/Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/universal-apple-darwin/release/bundle/macos/Crambo.app: replacing existing signature
+Signing with identity "***"
+Signing /var/folders/t5/f77_gwnj6p95qxy9py3fckx00000gn/T/.tmp8xH0s3/Crambo.zip
+Notarizing /Users/runner/work/crambo-desktop/crambo-desktop/crambo-desktop/src-tauri/target/universal-apple-darwin/release/bundle/macos/Crambo.app
+failed to bundle project failed codesign application: failed to notarize app: Error: HTTPError(statusCode: nil, error: Error Domain=NSURLErrorDomain Code=-1009 "The Internet connection appears to be offline." UserInfo={_kCFStreamErrorCodeKey=50, NSUnderlyingError=0x6000015868e0 {Error Domain=kCFErrorDomainCFNetwork Code=-1009 "(null)" UserInfo={_kCFStreamErrorDomainKey=1, _kCFStreamErrorCodeKey=50, _NSURLErrorNWResolutionReportKey=Resolved 0 endpoints in 0ms using unknown from cache, _NSURLErrorNWPathKey=unsatisfied (No network route)}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <8E010D17-8E2D-451F-9C14-A3E1F4B77A17>.<288>, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <8E010D17-8E2D-451F-9C14-A3E1F4B77A17>.<288>"
+), NSLocalizedDescription=The Internet connection appears to be offline., NSErrorFailingURLStringKey=https://appstoreconnect.apple.com/notary/v2/submissions/30915f96-8b67-4a8e-9a8c-c739b5d7bb14?, NSErrorFailingURLKey=https://appstoreconnect.apple.com/notary/v2/submissions/30915f96-8b67-4a8e-9a8c-c739b5d7bb14?, _kCFStreamErrorDomainKey=1})
+       Error failed to bundle project failed codesign application: failed to notarize app: Error: HTTPError(statusCode: nil, error: Error Domain=NSURLErrorDomain Code=-1009 "The Internet connection appears to be offline." UserInfo={_kCFStreamErrorCodeKey=50, NSUnderlyingError=0x6000015868e0 {Error Domain=kCFErrorDomainCFNetwork Code=-1009 "(null)" UserInfo={_kCFStreamErrorDomainKey=1, _kCFStreamErrorCodeKey=50, _NSURLErrorNWResolutionReportKey=Resolved 0 endpoints in 0ms using unknown from cache, _NSURLErrorNWPathKey=unsatisfied (No network route)}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <8E010D17-8E2D-451F-9C14-A3E1F4B77A17>.<288>, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <8E010D17-8E2D-451F-9C14-A3E1F4B77A17>.<288>"
+), NSLocalizedDescription=The Internet connection appears to be offline., NSErrorFailingURLStringKey=https://appstoreconnect.apple.com/notary/v2/submissions/30915f96-8b67-4a8e-9a8c-c739b5d7bb14?, NSErrorFailingURLKey=https://appstoreconnect.apple.com/notary/v2/submissions/30915f96-8b67-4a8e-9a8c-c739b5d7bb14?, _kCFStreamErrorDomainKey=1})
+Error: Command "npm ["run","tauri","build","--","--target","universal-apple-darwin"]" failed with exit code 1
+0s
