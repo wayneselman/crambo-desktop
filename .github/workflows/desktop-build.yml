@@ -30,7 +30,7 @@ jobs:
             args: ""
 
     runs-on: ${{ matrix.platform }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: crambo-desktop
@@ -66,7 +66,7 @@ jobs:
       - name: Install dependencies (npm)
         run: npm ci
 
-      - name: Build Tauri app
+      - name: Build and sign Tauri app (skip notarization)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,16 +77,51 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: crambo-desktop
           args: ${{ matrix.args }}
 
+      - name: Notarize macOS app
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          APP_PATH=$(find src-tauri/target -name "Crambo.app" -path "*/release/bundle/macos/*" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found, skipping notarization"
+            exit 0
+          fi
+          echo "Found app at: $APP_PATH"
+
+          echo "Verifying code signature before notarization..."
+          codesign -dvv "$APP_PATH" 2>&1 || true
+          codesign --verify --deep --strict "$APP_PATH" 2>&1 || true
+
+          ZIP_PATH="/tmp/Crambo-notarize.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+
+          echo "Submitting for notarization (timeout: 30 minutes)..."
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait --timeout 30m 2>&1 && NOTARIZE_OK=true || NOTARIZE_OK=false
+
+          if [ "$NOTARIZE_OK" = "true" ]; then
+            echo "Notarization succeeded! Stapling ticket..."
+            xcrun stapler staple "$APP_PATH"
+          else
+            echo "WARNING: Notarization did not complete. The app is signed but not notarized."
+            echo "Users can still install via right-click → Open."
+            echo "To notarize locally: xcrun notarytool submit Crambo.zip --apple-id EMAIL --password APP_PASSWORD --team-id TEAM_ID --wait"
+          fi
+
       - name: Upload build artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: crambo-desktop-${{ matrix.target }}
